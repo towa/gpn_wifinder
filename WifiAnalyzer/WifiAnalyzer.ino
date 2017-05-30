@@ -9,6 +9,7 @@
 #include <FS.h>
 #include "rboot.h"
 #include "rboot-api.h"
+#include "Colors.h"
 
 #define CONNECTION_TIMEOUT 10000																	//HTTP Probe Connection timeout in ms
 #define CONNECTION_TEST_URL "http://example.org/"													//HTTP Probe target
@@ -46,7 +47,7 @@ void setup() {
 	tft.begin(); //initialize the tft. This also sets up SPI to 80MHz Mode 0
 	tft.setRotation(2); //turn screen
 	tft.scroll(32); //move down by 32 pixels (needed)
-	//tft.fillScreen(TFT_BLACK);  //make it Black
+	tft.fillScreen(TFT_RED);  //make it Black
 
 	tft.writeFramebuffer();
 
@@ -119,9 +120,23 @@ void doScan() {
 	//Scan networks in range
     int n = scan.scanNetworks();
     for (int i = 0; i < n; i++) {
+      tft.fillScreen(TFT_BLACK);
+      tft.setCursor(0, 20);
+      tft.print(scan.encryptionType(i));
+      tft.setCursor(2, 91);
+      tft.print(scan.SSID(i));
+      
     	if (scan.encryptionType(i) == ENC_TYPE_NONE && !isOnBlacklist(scan.BSSIDstr(i))) {
     		Serial.print("Found network SSID : ");
     		Serial.println(scan.SSID(i));
+        tft.fillScreen(TFT_BLACK);
+        tft.setTextColor(TFT_GREEN);
+    		tft.setCursor(0, 20);
+        tft.setTextSize(3);
+        tft.print("Found network:");
+        tft.setCursor(2, 91);
+        tft.print(scan.SSID(i));
+       
 
     		//Switch device state to probe
     		netSSID = scan.SSID(i);
