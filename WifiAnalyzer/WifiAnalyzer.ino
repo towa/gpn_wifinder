@@ -4,7 +4,11 @@
 #include <ESP8266WiFiScan.h>
 #include <ESP8266HTTPClient.h>
 
-#include "LEDStripCtrl.h"
+#include <Adafruit_GFX.h>
+#include <GPNBadge.hpp>
+#include <FS.h>
+#include "rboot.h"
+#include "rboot-api.h"
 
 #define CONNECTION_TIMEOUT 10000																	//HTTP Probe Connection timeout in ms
 #define CONNECTION_TEST_URL "http://example.org/"													//HTTP Probe target
@@ -20,10 +24,10 @@ enum State {
 } deviceState = SCANNING;
 
 //Device state colors
-uint32_t colorBooting  = rgb(1.0f, 0.0f, 0.0f);	//Boot color (red)
-uint32_t colorScanning = rgb(0.0f, 0.0f, 1.0f);	//Scanning color (blue)
-uint32_t colorProbe    = rgb(1.0f, 1.0f, 0.0f);	//HTTP Probe running (yellow)
-uint32_t colorFound    = rgb(0.0f, 1.0f, 0.0f);	//Open WiFi available (green)
+uint32_t colorBooting   = pixels.Color(255, 255, 255);
+uint32_t colorScanning  = pixels.Color(0, 0, 255);
+uint32_t colorProbe     = pixels.Color(255, 255, 0);
+uint32_t colorFound     = pixels.Color(0, 255, 0);
 
 String netSSID;					//SSID of the currently probed network
 String netBSSID;				//BSSID of the currently probed network
@@ -31,17 +35,55 @@ uint32_t netProbeStart;			//time of http probe start
 std::vector<String> blacklist;	//BSSID blacklist, contains networks witch have been probed and failed
 
 //The setup function is called once at startup of the sketch
-void setup() {
-	Serial.begin(115200);			//Begin serial communication at 115200 baud
-	Serial.println("Booting...");	//Print booting message
+Badge badge;
 
-	initStrip();					//Initialize the ws2812 strip
-	setStripColor(colorBooting);	//Change strip color
+int pixelBrightness = 64;
+
+void setup() {
+	badge.init();
+	badge.setBacklight(true);
+
+	tft.begin(); //initialize the tft. This also sets up SPI to 80MHz Mode 0
+	tft.setRotation(2); //turn screen
+	tft.scroll(32); //move down by 32 pixels (needed)
+	//tft.fillScreen(TFT_BLACK);  //make it Black
+
+	tft.writeFramebuffer();
+
+	pixels.setBrightness(255);
+
+	rboot_config rboot_config = rboot_get_config();
+	SPIFFS.begin();
+	File f = SPIFFS.open("/rom"+String(rboot_config.current_rom),"w");
+	f.println("WiFinder\n");
+
 
 	ESP.eraseConfig();				//Clear WiFi credentials
 	WiFi.mode(WIFI_STA);			//Switch device into station mode
 
-	Serial.println("Done");			//Print boot done message
+}
+
+void setPixels(int from, int until, uint32_t c){
+	int r, g, b;
+	r = pixelBrightness*getRedValueFromColor(c)/255;
+	g = pixelBrightness*getGreenValueFromColor(c)/255;
+	b = pixelBrightness*getBlueValueFromColor(c)/255;
+	for(int i = from; i <= until; i++){
+		pixels.setPixelColor(i, r, g, b);
+	}
+	pixels.show();
+}
+
+uint8_t getRedValueFromColor(uint32_t c) {
+    return c >> 16;
+}
+
+uint8_t getGreenValueFromColor(uint32_t c) {
+    return c >> 8;
+}
+
+uint8_t getBlueValueFromColor(uint32_t c) {
+    return c;
 }
 
 // The loop function is called in an endless loop
@@ -56,9 +98,9 @@ void loop() {
 
 	//Set Strip color
 	switch (deviceState) {
-		case SCANNING   : setStripColor(colorScanning); break;
-		case PROBE      : setStripColor(colorProbe); break;
-		case FOUND      : setStripColor(colorFound); break;
+		case SCANNING   : setPixels(0,4,colorScanning); break;
+		case PROBE      : setPixels(0,3,colorProbe); break;
+		case FOUND      : setPixels(0,3,colorFound); break;
 	}
 
 	yield();
