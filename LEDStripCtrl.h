@@ -10,7 +10,7 @@
 
 #include <Arduino.h>
 
-#define LED_STRIP_LENGTH 32	//Number of WS2812 Led's in the strip
+#define LED_STRIP_LENGTH 100	//Number of WS2812 Led's in the strip
 
 void initStrip();
 void setStripColor(uint32_t color);
