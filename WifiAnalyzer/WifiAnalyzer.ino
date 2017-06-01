@@ -15,7 +15,7 @@
 #define CONNECTION_TEST_URL "http://example.org/"													//HTTP Probe target
 #define CONNECTION_TEST_PREFIX "<!doctype html>\n<html>\n<head>\n    <title>Example Domain</title>"	//HTTP Probe expected data
 
-/*
+/* 
  * Device States
  */
 enum State {
@@ -23,6 +23,7 @@ enum State {
 	PROBE,		//HTTP Probe running
 	FOUND		//Open WiFi available
 } deviceState = SCANNING;
+int switchi = 0;
 
 //Device state colors
 uint32_t colorBooting   = pixels.Color(255, 255, 255);
@@ -38,19 +39,17 @@ std::vector<String> blacklist;	//BSSID blacklist, contains networks witch have b
 //The setup function is called once at startup of the sketch
 Badge badge;
 
-int pixelBrightness = 64;
+int pixelBrightness = 32;
 
 void setup() {
 	badge.init();
 	badge.setBacklight(true);
+ 
 
 	tft.begin(); //initialize the tft. This also sets up SPI to 80MHz Mode 0
 	tft.setRotation(2); //turn screen
 	tft.scroll(32); //move down by 32 pixels (needed)
-	tft.fillScreen(TFT_RED);  //make it Black
-
-	tft.writeFramebuffer();
-
+ 
 	pixels.setBrightness(255);
 
 	rboot_config rboot_config = rboot_get_config();
@@ -87,10 +86,29 @@ uint8_t getBlueValueFromColor(uint32_t c) {
     return c;
 }
 
+void printLines(uint32_t clr, std::vector<String> lines) {
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(clr);
+    int x = _min(lines.size(),13);
+    for (uint32_t index = 0; index < x; index++) {
+        tft.setCursor(0,index*10);
+        tft.print(lines[index]);
+    }
+    tft.writeFramebuffer();
+}
+
 // The loop function is called in an endless loop
 void loop() {
 
 	//Process
+  switch (switchi) {
+    case 0:
+      tft.fillScreen(TFT_BLACK);
+      switchi = 0;https://github.com/towarischtsch/gpn_wifinder/tree/master
+    case 1:
+      tft.fillScreen(TFT_WHITE);
+      switchi = 0;
+  }
 	switch (deviceState) {
 		case SCANNING    : doScan(); break;
 		case PROBE       : doProbe(); break;
@@ -119,24 +137,23 @@ void doScan() {
 
 	//Scan networks in range
     int n = scan.scanNetworks();
+    std::vector<String> lines;
     for (int i = 0; i < n; i++) {
-      tft.fillScreen(TFT_BLACK);
-      tft.setCursor(0, 20);
-      tft.print(scan.encryptionType(i));
-      tft.setCursor(2, 91);
-      tft.print(scan.SSID(i));
-      
+      lines.push_back(scan.SSID(i));
+    }
+    printLines(TFT_BLUE,lines);
+    
+    for (int i = 0; i < n; i++) {  
     	if (scan.encryptionType(i) == ENC_TYPE_NONE && !isOnBlacklist(scan.BSSIDstr(i))) {
     		Serial.print("Found network SSID : ");
     		Serial.println(scan.SSID(i));
         tft.fillScreen(TFT_BLACK);
         tft.setTextColor(TFT_GREEN);
     		tft.setCursor(0, 20);
-        tft.setTextSize(3);
         tft.print("Found network:");
         tft.setCursor(2, 91);
         tft.print(scan.SSID(i));
-       
+        tft.writeFramebuffer();
 
     		//Switch device state to probe
     		netSSID = scan.SSID(i);
@@ -154,6 +171,14 @@ void doScan() {
  * if the returned string matched the expected.
  */
 void doProbe() {
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_GREEN);
+    tft.setCursor(0, 20);
+    tft.print("probing");
+    tft.setCursor(2, 91);
+    tft.print(netBSSID);
+    tft.writeFramebuffer();
+
 
 	//Test connection timeout
 	if (millis() - netProbeStart > CONNECTION_TIMEOUT) {
@@ -170,7 +195,11 @@ void doProbe() {
 
 	//If the WiFi is connected, download test file
 	if (WiFi.status() == WL_CONNECTED) {
-		Serial.println("Probe : connected to network");
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_GREEN);
+    tft.setCursor(0, 20);
+    tft.print("connected!");
+    tft.writeFramebuffer();
 
 		HTTPClient client;
 		client.begin(CONNECTION_TEST_URL);
