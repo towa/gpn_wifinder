@@ -49,6 +49,10 @@ void setup() {
 	tft.begin(); //initialize the tft. This also sets up SPI to 80MHz Mode 0
 	tft.setRotation(2); //turn screen
 	tft.scroll(32); //move down by 32 pixels (needed)
+  tft.setTextSize(2);
+  tft.print("WiFinder\nfor\nGulasch\nPush\nNotifier");
+  tft.setTextSize(1);
+  tft.writeFramebuffer();
  
 	pixels.setBrightness(255);
 
@@ -89,10 +93,13 @@ uint8_t getBlueValueFromColor(uint32_t c) {
 
 void printLines(uint32_t clr, std::vector<String> lines) {
     tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_WHITE);
+    tft.setCursor(10,0);
+    tft.print(blacklist.size());
     tft.setTextColor(clr);
     int x = _min(lines.size(),13);
     for (uint32_t index = 0; index < x; index++) {
-        tft.setCursor(0,index*10);
+        tft.setCursor(0,index * 10 + 10);
         tft.print(lines[index]);
     }
     tft.writeFramebuffer();
@@ -100,16 +107,7 @@ void printLines(uint32_t clr, std::vector<String> lines) {
 
 // The loop function is called in an endless loop
 void loop() {
-
-	//Process
-  switch (switchi) {
-    case 0:
-      tft.fillScreen(TFT_BLACK);
-      switchi = 0;https://github.com/towarischtsch/gpn_wifinder/tree/master
-    case 1:
-      tft.fillScreen(TFT_WHITE);
-      switchi = 0;
-  }
+  //Process
 	switch (deviceState) {
 		case SCANNING    : doScan(); break;
 		case PROBE       : doProbe(); break;
@@ -172,15 +170,9 @@ void doScan() {
  * if the returned string matched the expected.
  */
 void doProbe() {
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextColor(TFT_GREEN);
-    tft.setCursor(0, 20);
-    tft.print("probing");
-    tft.setCursor(2, 91);
-    tft.print(netBSSID);
-    tft.writeFramebuffer();
-
-
+    std::vector<String> msg = { "probing", "..", netSSID, netBSSID };
+    printLines(TFT_YELLOW,msg);
+    
 	//Test connection timeout
 	if (millis() - netProbeStart > CONNECTION_TIMEOUT) {
 		Serial.println("Probe aborted : send timeout");
