@@ -65,6 +65,7 @@ void setup() {
 
 void setPixels(int from, int until, uint32_t c){
 	int r, g, b;
+  pixelBrightness = (1100 - badge.getLDRLvl()) / 15;
 	r = pixelBrightness*getRedValueFromColor(c)/255;
 	g = pixelBrightness*getGreenValueFromColor(c)/255;
 	b = pixelBrightness*getBlueValueFromColor(c)/255;
